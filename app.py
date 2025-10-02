@@ -20,9 +20,96 @@ st.set_page_config(
 # -----------------------------
 st.markdown("""
     <style>
+    /* Animated Football Background */
+    .stApp {
+        background-image: url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1920');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }
+    
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.50);  /* Adjust opacity: 0.92 = 92% white, lower = more visible background */
+        backdrop-filter: blur(2px);  /* BLUR STRENGTH: Increase number for more blur (try 12px, 15px) */
+        z-index: 0;
+        pointer-events: none;
+    }
+    
     .main {
         padding: 0rem 1rem;
+        position: relative;
+        z-index: 1;
     }
+    
+    /* Celebration Animation */
+    @keyframes confetti-fall {
+        0% {
+            transform: translateY(100vh) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-10vh) rotate(720deg);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes trophy-bounce {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-20px) scale(1.1); }
+    }
+    
+    @keyframes firework-burst {
+        0% {
+            transform: translate(0, 0) scale(0);
+            opacity: 1;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            transform: translate(var(--tx), var(--ty)) scale(1);
+            opacity: 0;
+        }
+    }
+    
+    .celebration-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        overflow: hidden;
+    }
+    
+    .confetti {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        animation: confetti-fall 4s linear infinite;
+    }
+    
+    .firework {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        animation: firework-burst 1.5s ease-out forwards;
+    }
+    
+    .trophy-float {
+        animation: trophy-bounce 2s ease-in-out infinite;
+        display: inline-block;
+    }
+    
     .stButton>button {
         width: 100%;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
@@ -49,20 +136,22 @@ st.markdown("""
         margin: 1rem 0;
     }
     .metric-card {
-        background: white;
+        background: rgba(255, 255, 255, 0.95);
         padding: 1.5rem;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border-left: 4px solid #667eea;
+        backdrop-filter: blur(10px);
     }
     .info-box {
-        background: #f0f2f6;
+        background: rgba(240, 242, 246, 0.95);
         padding: 1rem;
         border-radius: 8px;
         border-left: 4px solid #38003c;
         margin: 1rem 0;
         color: #38003c;
         font-weight: 500;
+        backdrop-filter: blur(10px);
     }
     h1 {
         color: #38003c;
@@ -70,11 +159,22 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-list"] {
         gap: 2rem;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 0.5rem;
     }
     .stTabs [data-baseweb="tab"] {
         padding: 1rem 2rem;
         font-size: 1.1rem;
         font-weight: 600;
+        background: transparent;
+    }
+    
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -202,9 +302,89 @@ with tab1:
                 result_text = "CHAMPION" if nn_prob >= 0.5 else "NOT CHAMPION"
                 result_color = "#28a745" if nn_prob >= 0.5 else "#dc3545"
                 
+                # Add celebration animation if champion
+                if nn_prob >= 0.5:
+                    st.markdown("""
+                        <div class="celebration-container" id="celebration">
+                            <script>
+                                // Confetti Animation
+                                function createConfetti() {
+                                    const colors = ['#FFD700', '#FFA500', '#FF6347', '#4169E1', '#32CD32', '#FF1493'];
+                                    const shapes = ['⚽', '🏆', '⭐', '🎉', '🎊', '✨'];
+                                    const container = document.getElementById('celebration');
+                                    
+                                    for (let i = 0; i < 50; i++) {
+                                        setTimeout(() => {
+                                            const confetti = document.createElement('div');
+                                            confetti.className = 'confetti';
+                                            confetti.innerHTML = shapes[Math.floor(Math.random() * shapes.length)];
+                                            confetti.style.left = Math.random() * 100 + '%';
+                                            confetti.style.fontSize = (Math.random() * 20 + 20) + 'px';
+                                            confetti.style.animationDelay = (Math.random() * 2) + 's';
+                                            confetti.style.animationDuration = (Math.random() * 2 + 3) + 's';
+                                            container.appendChild(confetti);
+                                            
+                                            setTimeout(() => confetti.remove(), 100000);
+                                        }, i * 100);
+                                    }
+                                }
+                                
+                                // Fireworks Animation
+                                function createFirework(x, y) {
+                                    const container = document.getElementById('celebration');
+                                    const colors = ['#FFD700', '#FF6347', '#4169E1', '#32CD32', '#FF1493', '#FFA500', '#00CED1', '#FF69B4'];
+                                    const particleCount = 30;
+                                    
+                                    for (let i = 0; i < particleCount; i++) {
+                                        const particle = document.createElement('div');
+                                        particle.className = 'firework';
+                                        
+                                        const angle = (Math.PI * 2 * i) / particleCount;
+                                        const velocity = 50 + Math.random() * 100;
+                                        const tx = Math.cos(angle) * velocity;
+                                        const ty = Math.sin(angle) * velocity;
+                                        
+                                        particle.style.left = x + '%';
+                                        particle.style.top = y + '%';
+                                        particle.style.setProperty('--tx', tx + 'px');
+                                        particle.style.setProperty('--ty', ty + 'px');
+                                        particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                                        particle.style.boxShadow = `0 0 ${Math.random() * 10 + 5}px ${colors[Math.floor(Math.random() * colors.length)]}`;
+                                        
+                                        container.appendChild(particle);
+                                        
+                                        setTimeout(() => particle.remove(), 15000);
+                                    }
+                                }
+                                
+                                // Launch multiple fireworks
+                                function launchFireworks() {
+                                    const positions = [
+                                        {x: 20, y: 30}, {x: 50, y: 20}, {x: 80, y: 30},
+                                        {x: 30, y: 50}, {x: 70, y: 50}, {x: 40, y: 25},
+                                        {x: 60, y: 35}
+                                    ];
+                                    
+                                    positions.forEach((pos, index) => {
+                                        setTimeout(() => {
+                                            createFirework(pos.x, pos.y);
+                                        }, index * 400);
+                                    });
+                                    
+                                    // Repeat fireworks
+                                    setTimeout(launchFireworks, 3000);
+                                }
+                                
+                                // Start celebrations
+                                createConfetti();
+                                launchFireworks();
+                            </script>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
                 st.markdown(f"""
-                    <div style='background: {result_color}; padding: 2rem; border-radius: 15px; text-align: center; color: white;'>
-                        <h1 style='color: white; margin: 0;'>{result_emoji} {result_text}</h1>
+                    <div style='background: {result_color}; padding: 2rem; border-radius: 15px; text-align: center; color: white; position: relative; z-index: 10;'>
+                        <h1 style='color: white; margin: 0;'><span class='{"trophy-float" if nn_prob >= 0.5 else ""}'>{result_emoji}</span> {result_text}</h1>
                         <h2 style='color: white; margin-top: 1rem;'>{nn_prob*100:.1f}% Probability</h2>
                     </div>
                 """, unsafe_allow_html=True)
